@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import java.lang.*?>
+<?import javafx.scene.layout.*?>
+
+<SplitPane dividerPositions="0.29797979797979796" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="org.example.Client">
+  <items>
+    <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
+         <children>
+            <Button onAction="#upload" layoutX="16.0" layoutY="301.0" mnemonicParsing="false" text="Отправить" />
+            <Button layoutX="19.0" layoutY="365.0" mnemonicParsing="false" text="Button" />
+            <Button onAction="#download" layoutX="19.0" layoutY="334.0" mnemonicParsing="false" text="Загрузить" />
+            <ListView fx:id="clientView" layoutX="10.0" layoutY="15.0" prefHeight="277.0" prefWidth="162.0" />
+         </children></AnchorPane>
+    <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="398.0" prefWidth="415.0">
+         <children>
+            <ListView fx:id="serverView" layoutX="8.0" layoutY="14.0" prefHeight="367.0" prefWidth="404.0" />
+         </children></AnchorPane>
+  </items>
+</SplitPane>
