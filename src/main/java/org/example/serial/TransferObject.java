@@ -1,12 +1,14 @@
 package org.example.serial;
 
-import java.io.Serializable;
+import java.io.Serializable; // Обязательно для сериализации(перевода в бинарный формат)
 
 public class TransferObject implements Serializable {
 
     private String tag;
     private String message;
 
+
+    // добавили два конструктора
     public TransferObject() {
     }
 
@@ -15,6 +17,8 @@ public class TransferObject implements Serializable {
         this.message = message;
     }
 
+
+    // Добавили геттеры и сеттеры
     public String getTag() {
         return tag;
     }
@@ -31,6 +35,8 @@ public class TransferObject implements Serializable {
         this.message = message;
     }
 
+
+    // Добавили toString
     @Override
     public String toString() {
         return "TransferObject{" +
