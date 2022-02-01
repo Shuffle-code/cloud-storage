@@ -14,7 +14,7 @@ public final class Sender {
 
     static void getFile(DataInputStream is, Path clientDir, int size2, byte[] buf) throws IOException {
         String fileName = is.readUTF(); // получили имя
-        System.out.println("received: " + fileName);
+        System.out.println("received file: " + fileName);
         long size = is.readLong(); // получили размер
         try(OutputStream fos = new FileOutputStream(clientDir.resolve(fileName).toFile())) { // К файловому оутпутСтрим в клиенской директории с именем fileName + наверное тело файла дописываем побуферам 256в
             for (int i = 0; i < (size + size2 - 1) / size2; i++) { // (size + size2 - 1) / size2 - для получения кол-ва итераций, кратным количествам считываемых буферов по 256
