@@ -56,6 +56,8 @@ public class Handler implements Runnable {
                 } else if (command.equals("#get_file#")) { // Если нужно получить
                     String fileName = is.readUTF();
                     sendFile(fileName, os, clientDirServer);
+                } else if (command.equals("#pathDown#")){
+                    os.writeUTF("#pathDown#");
                 }
             }
         } catch (Exception e) {
