@@ -1,15 +1,18 @@
 package org.example;
 
+import io.netty.handler.codec.serialization.ObjectDecoderInputStream;
+import io.netty.handler.codec.serialization.ObjectEncoderOutputStream;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.Initializable;
-import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ListView;
-import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import lombok.extern.slf4j.Slf4j;
+import org.example.model.CloudMessage;
+import org.example.model.FileMessage;
+import org.example.model.FileRequest;
+import org.example.model.ListMessage;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URL;
@@ -17,6 +20,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ResourceBundle;
+
+@Slf4j
 
 public class Client implements Initializable {
 
@@ -29,8 +34,12 @@ public class Client implements Initializable {
     public ListView<String> serverView;
     public TextField textFieldServer;
     public TextField textFieldClient;
-    private DataInputStream is;
-    private DataOutputStream os;
+    private ObjectDecoderInputStream is;
+    private ObjectEncoderOutputStream os;
+    private CloudMessageProcessor processor;
+
+//    private DataInputStream is;
+//    private DataOutputStream os;
     private byte[] buf;
 // метод для отправки сообщений: получили текст из текстового поля, очистили текстовое поле, отправили, полностью
 //    public void sendMessage(ActionEvent actionEvent) throws IOException {
@@ -45,31 +54,56 @@ public class Client implements Initializable {
 //                readCommand();
 //                String msg = is.readUTF(); // wait message
 //                Platform.runLater(() -> listView.getItems().add(msg));
-                String command = is.readUTF(); // ждет команду
-                System.out.println("received: " + command);// wait message
+//                String command = is.readUTF(); // ждет команду
+                CloudMessage message = (CloudMessage) is.readObject();
+                log.info("received: {}",message);
+                processor.processMessage(message);
+//                System.out.println("received: " + command);// wait message
+//                switch (message.getType()){
+//                    case FILE:
+//                        processFileMessage((FileMessage) message);
+//                        break;
+//
+//                    case LIST:
+//                        processListMessage((ListMessage) message);
+//                        break;
+//                }
 
-                if (command.equals("#list#")) {
-                    Platform.runLater(() -> serverView.getItems().clear()); // Т.к readLoop работает в отдельном потоке
-                    int filesCount = is.readInt(); // Создали переменную равную колличеству прочитанному из "Стрима"
-                    for (int i = 0; i < filesCount; i++) {
-                        String fileName = is.readUTF();
-                        Platform.runLater(() -> serverView.getItems().add(fileName)); // Т.к readLoop работает в отдельном потоке
-
-                    }
-                }else if (command.equals("#file#")) {
-                    Sender.getFile(is, clientDir, SIZE, buf);
-                    Platform.runLater(this::updateClientView);
-
-                }
-                else if (command.equals("#pathDown#")) {
-                    Sender.getFile(is,clientDir.resolve(".."),SIZE, buf);
-                    Platform.runLater(this::updateClientViewPathDown);
-                }
+//                if (command.equals("#list#")) {
+//                    Platform.runLater(() -> serverView.getItems().clear()); // Т.к readLoop работает в отдельном потоке
+//                    int filesCount = is.readInt(); // Создали переменную равную колличеству прочитанному из "Стрима"
+//                    for (int i = 0; i < filesCount; i++) {
+//                        String fileName = is.readUTF();
+//                        Platform.runLater(() -> serverView.getItems().add(fileName)); // Т.к readLoop работает в отдельном потоке
+//
+//                    }
+//                }else if (command.equals("#file#")) {
+//                    Sender.getFile(is, clientDir, SIZE, buf);
+//                    Platform.runLater(this::updateClientView);
+//
+//                }
+//                else if (command.equals("#pathDown#")) {
+//                    updateClientViewPathDown(); // Т.к readLoop работает в отдельном потоке
+//
+//                }
 
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void processListMessage(ListMessage message) {
+        Platform.runLater(() -> {
+            serverView.getItems().clear();
+            serverView.getItems().addAll(message.getFiles());
+        });
+
+    }
+
+    private void processFileMessage(FileMessage message) throws IOException {
+    Files.write(clientDir.resolve(message.getFileName()), message.getBytes());
+    Platform.runLater(this::updateClientView);
     }
 
     private void readCommand() throws IOException {
@@ -121,10 +155,13 @@ public class Client implements Initializable {
             serverDir = Paths.get("data").toAbsolutePath();
             System.out.println(serverDir);
             updateClientView();
+            initMouseLincked();
+            processor = new CloudMessageProcessor(clientDir,clientView, serverView);
             Socket socket = new Socket("localhost", 8189); // Создали соединение, указали этот комп + порт, как на сервере
             System.out.println("Network created...");
-            is = new DataInputStream(socket.getInputStream()); // Считывает
-            os = new DataOutputStream(socket.getOutputStream()); // отправляет
+            os = new ObjectEncoderOutputStream(socket.getOutputStream()); // отправляет
+            is = new ObjectDecoderInputStream(socket.getInputStream()); // Считывает
+
             Thread readThread = new Thread(this::readLoop); // чтение в отдельном потоке(метод readLoop)
             readThread.setDaemon(true);
             readThread.start();
@@ -135,15 +172,17 @@ public class Client implements Initializable {
 
     public void upload(ActionEvent actionEvent) throws IOException { // отправить
         String fileName = clientView.getSelectionModel().getSelectedItem(); // нашли имя файла из clientView
-        Sender.sendFile(fileName, os, clientDir); // Выгрузили через "Отправщик"
+        os.writeObject(new FileMessage(clientDir.resolve(fileName)));
+//        Sender.sendFile(fileName, os, clientDir); // Выгрузили через "Отправщик"
     }
 
 
     public void download(ActionEvent actionEvent) throws IOException { // загрузить
         String fileName = serverView.getSelectionModel().getSelectedItem(); // создали(нашли) имя файла из serverView
-        os.writeUTF("#get_file#"); // написали команду
-        os.writeUTF(fileName); // написали имя файла
-        os.flush(); // Отправили всё
+        os.writeObject(new FileRequest(fileName));
+//        os.writeUTF("#get_file#"); // написали команду
+//        os.writeUTF(fileName); // написали имя файла
+//        os.flush(); // Отправили всё
     }
 
     public void pathDownClient(ActionEvent actionEvent) throws IOException {
@@ -160,5 +199,26 @@ public class Client implements Initializable {
     public void pathDownServer(ActionEvent actionEvent) {
 
         serverDir.resolve("..").toAbsolutePath();
+    }
+
+    private void initMouseLincked() {
+        clientView.setOnMouseClicked(e -> {
+
+            if (e.getClickCount() == 2) {
+                Path current = clientDir.resolve(getItem());
+                if (Files.isDirectory(current)) {
+                    clientDir = current;
+                    Platform.runLater(this::updateClientView);
+                }
+            }
+        });
+        serverView.setOnMouseClicked(e -> {
+            if (e.getClickCount() == 2) {
+
+            }
+        });
+    }
+    private String getItem() {
+        return clientView.getSelectionModel().getSelectedItem();
     }
 }

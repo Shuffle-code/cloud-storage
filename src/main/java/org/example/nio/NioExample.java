@@ -11,12 +11,20 @@ public class NioExample {
     public static void main(String[] args) throws IOException {
 
         Path path = Paths.get("data");
+        System.out.println(path.getParent());
         System.out.println(Files.exists(path));
 
         Path file = path.resolve("file.txt");
+        System.out.println(file.toUri());
+        System.out.println(path.toUri());
         System.out.println(file.toAbsolutePath());
+        System.out.println(file.getParent());
         System.out.println();
-        System.out.println(path.resolve("..").toAbsolutePath());
+        System.out.println();
+        System.out.println(path.resolve("..").toAbsolutePath().subpath(0, 5));
+
+        Path newPath = file.resolve("..").toAbsolutePath();
+        System.out.println(newPath);
         System.out.println("*");
 
         Path root = path.resolve("..").normalize();
@@ -41,7 +49,7 @@ public class NioExample {
 //                    .forEach(System.out::println);
         System.out.println("***");
 
-            List<String> filesTree = Files.walk(root, 1)
+            List<String> filesTree = Files.walk(root, 2)
                     .map(p -> p.getFileName().toString())
                     .collect(Collectors.toList());
 
